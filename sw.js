@@ -1,4 +1,4 @@
-const CACHE = 'pokemon-v1';
+const CACHE = 'pokemon-v3';
 const APP_SHELL = [
   '/pokemon-collection/',
   '/pokemon-collection/index.html',
