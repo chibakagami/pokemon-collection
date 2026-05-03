@@ -1,8 +1,9 @@
 const CACHE = 'pokemon-v1';
 const APP_SHELL = [
-  '/index.html',
-  '/manifest.json',
-  '/icon.svg',
+  '/pokemon-collection/',
+  '/pokemon-collection/index.html',
+  '/pokemon-collection/manifest.json',
+  '/pokemon-collection/icon.svg',
   'https://unpkg.com/vue@3/dist/vue.global.js',
 ];
 
