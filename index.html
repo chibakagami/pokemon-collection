@@ -809,21 +809,36 @@ createApp({
     async function saveForm() {
       if (!form.value.name.trim()) { toast('請輸入商品名稱','err'); return; }
       const location = locMode.value === 'online' ? 'ポケセンonline' : (customLoc.value.trim()||'ポケセンonline');
-      const payload  = { ...form.value, name:form.value.name.trim(), location, quantity:form.value.quantity||1 };
-      if (editTarget.value) {
-        payload.id = editTarget.value.id;
-        payload.createdAt = editTarget.value.createdAt;
-        await DB.put(payload);
-        const idx = allItems.value.findIndex(i => i.id === payload.id);
-        if (idx !== -1) allItems.value[idx] = payload;
-        toast('已儲存變更');
-      } else {
-        payload.createdAt = Date.now();
-        payload.id = await DB.add(payload);
-        allItems.value.push(payload);
-        toast('已新增商品');
+      // 明確建立純物件（避免 Vue reactive Proxy 無法被 IndexedDB structured clone）
+      const payload = {
+        photos:   [...(form.value.photos   || [])],
+        name:     form.value.name.trim(),
+        category: form.value.category || '娃娃',
+        pokemons: [...(form.value.pokemons || [])],
+        series:   form.value.series   || '',
+        date:     form.value.date     || '',
+        quantity: form.value.quantity || 1,
+        location,
+      };
+      try {
+        if (editTarget.value) {
+          payload.id        = editTarget.value.id;
+          payload.createdAt = editTarget.value.createdAt;
+          await DB.put(payload);
+          const idx = allItems.value.findIndex(i => i.id === payload.id);
+          if (idx !== -1) allItems.value.splice(idx, 1, payload);
+          toast('已儲存變更');
+        } else {
+          payload.createdAt = Date.now();
+          payload.id = await DB.add(payload);
+          allItems.value.push(payload);
+          toast('已新增商品');
+        }
+        showForm.value = false;
+      } catch(err) {
+        toast('儲存失敗：' + err.message, 'err');
+        console.error('[saveForm]', err);
       }
-      showForm.value = false;
     }
 
     async function handlePhotoInput(e) {
