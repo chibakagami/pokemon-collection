@@ -1,675 +1,912 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>寶可夢收藏品管理</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <meta name="theme-color" content="#e63946" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="寶可夢收藏" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"/>
+  <title>寶可夢收藏庫存</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="icon" href="icon.svg" type="image/svg+xml"/>
+  <meta name="theme-color" content="#cc2233"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="寶可夢收藏"/>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #0a0a18;
+      --surface:  #13132a;
+      --card:     #1c1c3a;
+      --border:   #2c2c6a;
+      --bhi:      #5050b0;
+      --red:      #cc2233;
+      --red-hi:   #ff3344;
+      --red-sh:   #881122;
+      --yellow:   #f0c030;
+      --yel-hi:   #ffd040;
+      --yel-sh:   #a08020;
+      --green:    #22c040;
+      --blue:     #2266cc;
+      --purple:   #8833cc;
+      --text:     #d8d8f0;
+      --dim:      #6060a0;
+      --px: 'Press Start 2P', monospace;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;min-height:100vh;overflow-x:hidden}
 
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #1a1a2e;
-      color: #eee;
-      min-height: 100vh;
-    }
+    /* ── HEADER ── */
+    .hd{background:var(--surface);border-bottom:3px solid var(--bhi);box-shadow:0 3px 0 var(--border);
+      padding:10px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:50}
+    .hd-brand{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+    .hd-ball{width:30px;height:30px;flex-shrink:0}
+    .hd-title{font-family:var(--px);font-size:.5rem;color:var(--yellow);text-shadow:2px 2px 0 var(--yel-sh);
+      line-height:1.6;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .hd-nav{display:flex;gap:4px;flex-shrink:0}
+    .nav-btn{font-family:var(--px);font-size:.42rem;padding:7px 10px;background:var(--card);color:var(--dim);
+      border:2px solid var(--border);cursor:pointer;transition:all .05s;letter-spacing:.5px}
+    .nav-btn.on{background:var(--red);color:#fff;border-color:var(--red-hi) var(--red-sh) var(--red-sh) var(--red-hi);
+      box-shadow:2px 2px 0 rgba(0,0,0,.4)}
+    .nav-btn:not(.on):hover{background:var(--border);color:var(--text)}
+    .hd-io{font-family:var(--px);font-size:.4rem;padding:6px 8px;background:var(--card);
+      color:var(--yellow);border:2px solid var(--yel-sh);cursor:pointer;flex-shrink:0}
 
-    /* ── Header ── */
-    header {
-      background: linear-gradient(135deg, #e63946, #f4a261);
-      padding: 20px 32px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      box-shadow: 0 4px 16px rgba(0,0,0,.4);
-    }
-    header img.pokeball {
-      width: 48px; height: 48px;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,.4));
-      animation: spin 6s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    header h1 { font-size: 1.7rem; font-weight: 800; letter-spacing: .5px; }
+    /* ── TOOLBAR ── */
+    .tb{padding:10px 14px;background:var(--surface);border-bottom:2px solid var(--border);
+      display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .tb-search{flex:1;min-width:140px;position:relative}
+    .tb-search-ic{position:absolute;left:9px;top:50%;transform:translateY(-50%);opacity:.5;pointer-events:none}
+    input.tb-inp{width:100%;padding:8px 8px 8px 30px;background:var(--card);border:2px solid var(--bhi);
+      color:var(--text);font-size:.9rem;outline:none}
+    input.tb-inp:focus{border-color:var(--yellow)}
+    select.tb-sel{padding:8px 10px;background:var(--card);border:2px solid var(--bhi);
+      color:var(--text);font-size:.85rem;cursor:pointer;outline:none}
+    .tb-count{font-family:var(--px);font-size:.42rem;color:var(--dim);white-space:nowrap}
 
-    /* ── Stats bar ── */
-    .stats {
-      display: flex; gap: 20px; flex-wrap: wrap;
-      padding: 14px 32px;
-      background: #16213e;
-      border-bottom: 1px solid #0f3460;
-    }
-    .stat-chip {
-      background: #0f3460;
-      border-radius: 20px;
-      padding: 4px 14px;
-      font-size: .82rem;
-      color: #a8dadc;
-    }
-    .stat-chip span { color: #f4a261; font-weight: 700; }
+    /* ── GRID ── */
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;padding:14px}
 
-    /* ── Toolbar ── */
-    .toolbar {
-      display: flex; flex-wrap: wrap; gap: 12px;
-      padding: 20px 32px;
-      background: #16213e;
-    }
-    .search-box {
-      flex: 1; min-width: 200px;
-      position: relative;
-    }
-    .search-box input {
-      width: 100%;
-      padding: 10px 14px 10px 40px;
-      border-radius: 10px;
-      border: 1px solid #0f3460;
-      background: #1a1a2e;
-      color: #eee;
-      font-size: .95rem;
-      outline: none;
-      transition: border-color .2s;
-    }
-    .search-box input:focus { border-color: #e63946; }
-    .search-box .icon {
-      position: absolute; left: 12px; top: 50%;
-      transform: translateY(-50%);
-      opacity: .5; font-size: 1rem;
-    }
+    /* ── CARD ── */
+    .card{background:var(--card);border:3px solid var(--bhi);box-shadow:3px 3px 0 var(--border);
+      display:flex;flex-direction:column;cursor:pointer;transition:transform .05s,box-shadow .05s}
+    .card:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--border)}
+    .card-img{aspect-ratio:1;background:var(--surface);display:flex;align-items:center;
+      justify-content:center;overflow:hidden;position:relative}
+    .card-img img{width:100%;height:100%;object-fit:cover}
+    .card-img .no-photo{font-size:2.8rem;opacity:.25}
+    .card-qty{position:absolute;bottom:4px;right:4px;font-family:var(--px);font-size:.42rem;
+      background:var(--red);color:#fff;padding:2px 6px;border:2px solid var(--red-hi)}
+    .card-cat{position:absolute;top:4px;left:4px;font-family:var(--px);font-size:.38rem;
+      padding:2px 5px;border:2px solid}
+    .cc-doll{background:#aa2299;color:#fff;border-color:#dd44cc}
+    .cc-stat{background:#1a55bb;color:#fff;border-color:#3377ee}
+    .cc-badg{background:#bb7700;color:#fff;border-color:#eeaa00}
+    .cc-othr{background:#3d5c5c;color:#fff;border-color:#5a8080}
+    .card-body{padding:8px;flex:1;display:flex;flex-direction:column;gap:3px}
+    .card-name{font-weight:700;font-size:.88rem;line-height:1.3;
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .card-date{font-size:.72rem;color:var(--dim)}
+    .card-pokes{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px}
+    .poke-tag{font-family:var(--px);font-size:.32rem;background:var(--border);
+      color:var(--yellow);padding:2px 5px;border:1px solid var(--bhi)}
+    .card-acts{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:2px solid var(--border)}
+    .ca-btn{padding:6px 2px;font-family:var(--px);font-size:.35rem;text-align:center;
+      cursor:pointer;border:none;background:transparent;color:var(--dim);
+      border-right:1px solid var(--border);transition:all .05s}
+    .ca-btn:last-child{border-right:none}
+    .ca-btn:hover{background:var(--border);color:var(--text)}
+    .ca-edit:hover{background:#1a3366;color:#88bbff}
+    .ca-del:hover{background:var(--red-sh);color:#ff8888}
 
-    select, .btn {
-      padding: 10px 16px;
-      border-radius: 10px;
-      border: 1px solid #0f3460;
-      background: #1a1a2e;
-      color: #eee;
-      font-size: .9rem;
-      cursor: pointer;
-      outline: none;
-      transition: all .2s;
-    }
-    select:focus { border-color: #e63946; }
+    /* ── EMPTY ── */
+    .empty{text-align:center;padding:60px 20px;color:var(--dim)}
+    .empty-ic{font-size:4rem}
+    .empty p{font-family:var(--px);font-size:.5rem;line-height:2.5;margin-top:14px}
 
-    .btn { border: none; font-weight: 600; }
-    .btn-primary { background: #e63946; }
-    .btn-primary:hover { background: #c62b37; }
-    .btn-secondary { background: #0f3460; }
-    .btn-secondary:hover { background: #1a4a7a; }
-    .btn-danger { background: #c0392b; }
-    .btn-danger:hover { background: #a93226; }
-    .btn-success { background: #27ae60; }
-    .btn-success:hover { background: #1e8449; }
+    /* ── FAB ── */
+    .fab{position:fixed;bottom:22px;right:18px;width:54px;height:54px;background:var(--red);
+      color:#fff;font-size:1.7rem;font-weight:700;border:3px solid var(--red-hi);
+      box-shadow:4px 4px 0 var(--red-sh);cursor:pointer;z-index:40;
+      display:flex;align-items:center;justify-content:center;transition:all .05s}
+    .fab:active{box-shadow:1px 1px 0 var(--red-sh);transform:translate(3px,3px)}
 
-    /* ── Grid ── */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 20px;
-      padding: 24px 32px;
-    }
+    /* ── BUTTONS ── */
+    .btn{font-family:var(--px);font-size:.48rem;padding:9px 14px;cursor:pointer;
+      border:2px solid;box-shadow:2px 2px 0 rgba(0,0,0,.4);letter-spacing:.5px;transition:all .05s}
+    .btn:active{box-shadow:none;transform:translate(2px,2px)}
+    .btn-red{background:var(--red);color:#fff;border-color:var(--red-hi) var(--red-sh) var(--red-sh) var(--red-hi)}
+    .btn-yel{background:var(--yellow);color:#111;border-color:var(--yel-hi) var(--yel-sh) var(--yel-sh) var(--yel-hi)}
+    .btn-drk{background:var(--card);color:var(--text);border-color:var(--bhi) var(--border) var(--border) var(--bhi)}
+    .btn-grn{background:var(--green);color:#000;border-color:#44e060 #119030 #119030 #44e060}
 
-    /* ── Card ── */
-    .card {
-      background: #16213e;
-      border-radius: 16px;
-      overflow: hidden;
-      border: 1px solid #0f3460;
-      transition: transform .2s, box-shadow .2s;
-      position: relative;
-    }
-    .card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+    /* ── MODAL ── */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;
+      align-items:flex-start;justify-content:center;z-index:100;padding:14px;overflow-y:auto}
+    .modal{background:var(--surface);border:3px solid var(--bhi);box-shadow:6px 6px 0 var(--border);
+      width:100%;max-width:480px;margin:auto}
+    .mhd{background:var(--red);border-bottom:3px solid var(--red-sh);padding:11px 14px;
+      display:flex;justify-content:space-between;align-items:center}
+    .mhd h2{font-family:var(--px);font-size:.58rem;color:#fff;letter-spacing:.8px}
+    .mhd-close{background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer}
+    .mbody{padding:14px;display:flex;flex-direction:column;gap:13px;max-height:72vh;overflow-y:auto}
+    .mfoot{padding:11px 14px;border-top:2px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
 
-    .card-img {
-      background: linear-gradient(135deg, #0f3460, #1a1a2e);
-      display: flex; align-items: center; justify-content: center;
-      height: 160px;
-      position: relative;
-    }
-    .card-img img {
-      width: 120px; height: 120px;
-      object-fit: contain;
-      image-rendering: pixelated;
-      filter: drop-shadow(0 4px 8px rgba(0,0,0,.6));
-    }
-    .card-img .no-img {
-      font-size: 4rem; opacity: .3;
-    }
-    .card-number {
-      position: absolute; top: 8px; right: 10px;
-      font-size: .75rem; color: #a8dadc; font-weight: 700;
-      background: rgba(0,0,0,.4); padding: 2px 7px; border-radius: 8px;
-    }
-    .card-star {
-      position: absolute; top: 8px; left: 10px;
-      font-size: 1.1rem; cursor: pointer;
-      transition: transform .15s;
-    }
-    .card-star:hover { transform: scale(1.3); }
+    /* ── FORM ── */
+    .fg{display:flex;flex-direction:column;gap:5px}
+    .flabel{font-family:var(--px);font-size:.45rem;color:var(--yellow);letter-spacing:.5px}
+    .finput,.fsel,.ftxt{width:100%;padding:9px 10px;background:var(--card);border:2px solid var(--bhi);
+      color:var(--text);font-family:system-ui,-apple-system,sans-serif;font-size:.88rem;outline:none}
+    .finput:focus,.fsel:focus,.ftxt:focus{border-color:var(--yellow)}
+    .ftxt{resize:vertical;min-height:56px}
+    .frow{display:flex;gap:10px}
+    .frow>.fg{flex:1}
 
-    .card-body { padding: 14px; }
-    .card-name { font-weight: 700; font-size: 1.05rem; margin-bottom: 6px; }
-    .card-type { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-    .type-badge {
-      font-size: .72rem; font-weight: 600;
-      padding: 2px 9px; border-radius: 10px;
-      text-transform: capitalize;
-    }
-    .card-note {
-      font-size: .8rem; color: #aaa;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .card-actions {
-      display: flex; gap: 6px; padding: 10px 14px;
-      border-top: 1px solid #0f3460;
-    }
-    .card-actions .btn { flex: 1; padding: 6px; font-size: .8rem; border-radius: 8px; }
+    /* location toggle */
+    .loc-toggle{display:flex;gap:6px}
+    .loc-opt{flex:1;padding:7px 6px;text-align:center;font-family:var(--px);font-size:.38rem;
+      cursor:pointer;border:2px solid var(--bhi);background:var(--card);color:var(--dim);line-height:1.8}
+    .loc-opt.on{background:var(--yellow);color:#111;border-color:var(--yel-hi) var(--yel-sh) var(--yel-sh) var(--yel-hi)}
 
-    /* ── Type colours ── */
-    .type-fire     { background:#e25822; color:#fff; }
-    .type-water    { background:#2980b9; color:#fff; }
-    .type-grass    { background:#27ae60; color:#fff; }
-    .type-electric { background:#f39c12; color:#000; }
-    .type-psychic  { background:#9b59b6; color:#fff; }
-    .type-normal   { background:#7f8c8d; color:#fff; }
-    .type-fighting { background:#c0392b; color:#fff; }
-    .type-flying   { background:#3498db; color:#fff; }
-    .type-poison   { background:#8e44ad; color:#fff; }
-    .type-ground   { background:#e67e22; color:#fff; }
-    .type-rock     { background:#95a5a6; color:#000; }
-    .type-bug      { background:#2ecc71; color:#000; }
-    .type-ghost    { background:#6c3483; color:#fff; }
-    .type-steel    { background:#bdc3c7; color:#000; }
-    .type-ice      { background:#85c1e9; color:#000; }
-    .type-dragon   { background:#1a5276; color:#fff; }
-    .type-dark     { background:#2c3e50; color:#fff; }
-    .type-fairy    { background:#f1948a; color:#000; }
-    .type-default  { background:#555; color:#fff; }
+    /* category pills */
+    .cat-pills{display:flex;gap:6px;flex-wrap:wrap}
+    .cat-pill{padding:6px 10px;font-family:var(--px);font-size:.4rem;cursor:pointer;
+      border:2px solid var(--bhi);background:var(--card);color:var(--dim);transition:all .05s}
+    .cat-pill.on{background:var(--red);color:#fff;border-color:var(--red-hi) var(--red-sh) var(--red-sh) var(--red-hi)}
 
-    /* ── Empty state ── */
-    .empty {
-      grid-column: 1/-1;
-      text-align: center; padding: 80px 20px;
-      color: #555;
-    }
-    .empty .big { font-size: 5rem; }
-    .empty p { margin-top: 12px; font-size: 1.1rem; }
+    /* poke tag input */
+    .tag-wrap{display:flex;flex-wrap:wrap;gap:4px;padding:6px;background:var(--card);
+      border:2px solid var(--bhi);cursor:text;min-height:42px}
+    .tag-wrap:focus-within{border-color:var(--yellow)}
+    .poke-chip{display:flex;align-items:center;gap:3px;background:var(--border);
+      color:var(--yellow);font-family:var(--px);font-size:.35rem;padding:3px 6px}
+    .poke-chip button{background:none;border:none;color:var(--dim);cursor:pointer;
+      font-size:.8rem;line-height:1;padding:0 1px}
+    .poke-chip button:hover{color:var(--red)}
+    .tag-inp{border:none;outline:none;background:transparent;color:var(--text);font-size:.85rem;
+      min-width:70px;flex:1}
 
-    /* ── Modal ── */
-    .overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.7);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 100; padding: 20px;
-    }
-    .modal {
-      background: #16213e;
-      border-radius: 20px;
-      width: 100%; max-width: 480px;
-      border: 1px solid #0f3460;
-      box-shadow: 0 20px 60px rgba(0,0,0,.8);
-      overflow: hidden;
-    }
-    .modal-header {
-      background: linear-gradient(135deg, #e63946, #f4a261);
-      padding: 18px 24px;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .modal-header h2 { font-size: 1.2rem; }
-    .modal-close {
-      background: none; border: none; color: #fff;
-      font-size: 1.4rem; cursor: pointer; line-height: 1;
-    }
-    .modal-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+    /* photo upload */
+    .photos-area{display:flex;flex-wrap:wrap;gap:7px;align-items:flex-start}
+    .ph-thumb{width:70px;height:70px;position:relative;border:2px solid var(--bhi);overflow:hidden;flex-shrink:0}
+    .ph-thumb img{width:100%;height:100%;object-fit:cover}
+    .ph-rm{position:absolute;top:1px;right:1px;background:var(--red);color:#fff;
+      border:none;width:18px;height:18px;font-size:.65rem;cursor:pointer;
+      display:flex;align-items:center;justify-content:center}
+    .ph-add{width:70px;height:70px;border:2px dashed var(--bhi);background:var(--card);color:var(--dim);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      cursor:pointer;font-size:1.5rem;gap:2px;transition:border-color .2s;flex-shrink:0}
+    .ph-add:hover{border-color:var(--yellow);color:var(--yellow)}
+    .ph-add span{font-family:var(--px);font-size:.32rem}
 
-    label { font-size: .85rem; color: #a8dadc; display: block; margin-bottom: 5px; }
-    input[type=text], input[type=number], input[type=url], textarea, .modal select {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid #0f3460;
-      background: #1a1a2e;
-      color: #eee;
-      font-size: .95rem;
-      outline: none;
-      transition: border-color .2s;
-    }
-    input:focus, textarea:focus, .modal select:focus { border-color: #e63946; }
-    textarea { resize: vertical; min-height: 70px; }
+    /* ── DETAIL MODAL ── */
+    .dt-photos{background:var(--bg);position:relative;display:flex;align-items:center;justify-content:center;min-height:200px}
+    .dt-img{width:100%;max-height:300px;object-fit:contain}
+    .dt-nophoto{font-size:5rem;opacity:.2;padding:40px}
+    .dt-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.6);
+      border:2px solid var(--bhi);color:#fff;font-size:1.3rem;padding:8px 12px;cursor:pointer}
+    .dt-nav.prv{left:4px}
+    .dt-nav.nxt{right:4px}
+    .dt-thumbs{display:flex;gap:4px;padding:7px;background:var(--surface);
+      border-top:2px solid var(--border);overflow-x:auto}
+    .dt-thumb{width:44px;height:44px;flex-shrink:0;object-fit:cover;cursor:pointer;
+      border:2px solid var(--border);opacity:.55;transition:opacity .1s,border-color .1s}
+    .dt-thumb.on{border-color:var(--yellow);opacity:1}
+    .dt-info{padding:12px 14px;display:flex;flex-direction:column;gap:0}
+    .dt-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
+      padding:7px 0;border-bottom:1px solid var(--border);font-size:.85rem}
+    .dt-row:last-child{border-bottom:none}
+    .dt-lbl{font-family:var(--px);font-size:.4rem;color:var(--dim);white-space:nowrap;padding-top:2px}
+    .dt-val{font-weight:700;text-align:right;word-break:break-word}
 
-    .row { display: flex; gap: 12px; }
-    .row > * { flex: 1; }
+    /* ── STATS ── */
+    .sv{padding:14px;display:flex;flex-direction:column;gap:16px}
+    .sv-overview{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    @media(max-width:380px){.sv-overview{grid-template-columns:repeat(2,1fr)}}
+    .stat-block{background:var(--card);border:3px solid var(--bhi);box-shadow:3px 3px 0 var(--border);
+      padding:12px 6px;text-align:center}
+    .sb-num{font-family:var(--px);font-size:1.15rem;color:var(--yellow);text-shadow:2px 2px 0 var(--yel-sh)}
+    .sb-lbl{font-family:var(--px);font-size:.35rem;color:var(--dim);margin-top:6px;line-height:2}
+    .sv-sec{background:var(--card);border:3px solid var(--bhi);box-shadow:3px 3px 0 var(--border)}
+    .sv-sec-ttl{font-family:var(--px);font-size:.48rem;color:var(--yellow);
+      padding:9px 13px;border-bottom:2px solid var(--border);letter-spacing:.8px}
+    .sv-sec-body{padding:11px 13px;display:flex;flex-direction:column;gap:9px}
+    .bar-row{display:flex;align-items:center;gap:8px}
+    .bar-lbl{width:78px;flex-shrink:0;font-size:.78rem;color:var(--dim);text-align:right;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .bar-track{flex:1;height:14px;background:var(--surface);border:2px solid var(--border);overflow:hidden}
+    .bar-fill{height:100%;transition:width .5s ease;
+      background-image:repeating-linear-gradient(90deg,transparent 0,transparent 3px,rgba(255,255,255,.12) 3px,rgba(255,255,255,.12) 4px)}
+    .bf-red{background-color:var(--red)}
+    .bf-blue{background-color:var(--blue)}
+    .bf-yel{background-color:var(--yellow)}
+    .bf-grn{background-color:var(--green)}
+    .bf-pur{background-color:var(--purple)}
+    .bar-cnt{font-family:var(--px);font-size:.42rem;color:var(--text);min-width:26px}
 
-    .type-selector { display: flex; flex-wrap: wrap; gap: 6px; }
-    .type-toggle {
-      padding: 4px 10px; border-radius: 10px; font-size: .75rem;
-      font-weight: 600; cursor: pointer; border: 2px solid transparent;
-      transition: all .15s; text-transform: capitalize;
-    }
-    .type-toggle.selected { border-color: #fff; transform: scale(1.05); }
+    /* ── I/O PANEL ── */
+    .io-sec{background:var(--card);border:2px solid var(--border);padding:13px;display:flex;flex-direction:column;gap:9px}
+    .io-ttl{font-family:var(--px);font-size:.46rem;color:var(--yellow)}
+    .io-desc{font-size:.82rem;color:var(--dim);line-height:1.6}
+    .io-btns{display:flex;gap:8px;flex-wrap:wrap}
 
-    .preview-img { text-align: center; margin-top: 4px; }
-    .preview-img img { width: 80px; height: 80px; object-fit: contain; }
+    /* ── DELETE ── */
+    .del-mhd{background:var(--red-sh)}
+    .del-txt{font-size:.88rem;line-height:1.7}
+    .del-txt strong{color:var(--yellow)}
 
-    .modal-footer {
-      padding: 16px 24px;
-      display: flex; gap: 10px; justify-content: flex-end;
-      border-top: 1px solid #0f3460;
-    }
+    /* ── TOAST ── */
+    .toasts{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);z-index:200;
+      display:flex;flex-direction:column;gap:5px;align-items:center;pointer-events:none}
+    .toast{font-family:var(--px);font-size:.45rem;padding:9px 15px;box-shadow:3px 3px 0 rgba(0,0,0,.4);
+      white-space:nowrap;animation:toastIn .2s ease}
+    .toast-ok{background:var(--green);color:#000;border:2px solid #44e060}
+    .toast-err{background:var(--red);color:#fff;border:2px solid var(--red-hi)}
+    .toast-info{background:var(--blue);color:#fff;border:2px solid #4488ee}
+    @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-    /* ── Detail view ── */
-    .detail-img { text-align: center; padding: 24px; background: linear-gradient(135deg,#0f3460,#1a1a2e); }
-    .detail-img img { width: 160px; height: 160px; object-fit: contain; filter: drop-shadow(0 8px 16px rgba(0,0,0,.6)); }
-    .detail-body { padding: 24px; }
-    .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #0f3460; }
-    .detail-row:last-child { border-bottom: none; }
-    .detail-label { color: #a8dadc; font-size: .85rem; }
-    .detail-value { font-weight: 600; }
+    /* ── LOADING ── */
+    .loading{text-align:center;padding:60px;font-family:var(--px);font-size:.52rem;
+      color:var(--dim);animation:blink 1s step-end infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 
-    /* ── Pagination ── */
-    .pagination {
-      display: flex; justify-content: center; align-items: center; gap: 8px;
-      padding: 16px 32px 32px;
-    }
-    .page-btn {
-      width: 36px; height: 36px; border-radius: 8px; border: 1px solid #0f3460;
-      background: #1a1a2e; color: #eee; cursor: pointer; font-size: .9rem;
-      transition: all .2s; display: flex; align-items: center; justify-content: center;
-    }
-    .page-btn:hover { background: #0f3460; }
-    .page-btn.active { background: #e63946; border-color: #e63946; font-weight: 700; }
-    .page-btn:disabled { opacity: .3; cursor: not-allowed; }
-
-    /* ── Toast ── */
-    .toast-container {
-      position: fixed; bottom: 24px; right: 24px; z-index: 200;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .toast {
-      background: #27ae60; color: #fff;
-      padding: 12px 18px; border-radius: 10px;
-      font-size: .9rem; font-weight: 600;
-      box-shadow: 0 4px 12px rgba(0,0,0,.4);
-      animation: fadeIn .3s ease;
-    }
-    .toast.error { background: #c0392b; }
-    @keyframes fadeIn { from { opacity:0; transform: translateY(10px); } }
-
-    @media (max-width: 600px) {
-      header, .stats, .toolbar, .grid, .pagination { padding-left: 16px; padding-right: 16px; }
-      header h1 { font-size: 1.2rem; }
-    }
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-track{background:var(--bg)}
+    ::-webkit-scrollbar-thumb{background:var(--bhi)}
   </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- Header -->
-  <header>
-    <svg class="pokeball" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="50" cy="50" r="48" fill="white" stroke="#333" stroke-width="4"/>
-      <path d="M2 50 Q2 2 50 2 Q98 2 98 50 Z" fill="#e63946"/>
-      <rect x="2" y="46" width="96" height="8" fill="#333"/>
-      <circle cx="50" cy="50" r="14" fill="white" stroke="#333" stroke-width="4"/>
-      <circle cx="50" cy="50" r="7" fill="#ddd"/>
-    </svg>
-    <h1>寶可夢收藏品管理</h1>
+  <!-- ── HEADER ── -->
+  <header class="hd">
+    <div class="hd-brand">
+      <svg class="hd-ball" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="48" fill="#f0f0f0" stroke="#222" stroke-width="4"/>
+        <path d="M2 50 Q2 2 50 2 Q98 2 98 50 Z" fill="#cc2233"/>
+        <rect x="2" y="44" width="96" height="12" fill="#222"/>
+        <circle cx="50" cy="50" r="14" fill="#222" stroke="#222" stroke-width="3"/>
+        <circle cx="50" cy="50" r="8" fill="#d8d8d8"/>
+      </svg>
+      <div class="hd-title">POKEMON<br>COLLECTION</div>
+    </div>
+    <nav class="hd-nav">
+      <button class="nav-btn" :class="{on:view==='col'}" @click="view='col'">庫存</button>
+      <button class="nav-btn" :class="{on:view==='stat'}" @click="view='stat'">統計</button>
+    </nav>
+    <button class="hd-io" @click="showIO=true" title="備份">💾</button>
   </header>
 
-  <!-- Stats -->
-  <div class="stats">
-    <div class="stat-chip">全部 <span>{{ pokemons.length }}</span></div>
-    <div class="stat-chip">顯示 <span>{{ filtered.length }}</span></div>
-    <div class="stat-chip">收藏 <span>{{ pokemons.filter(p=>p.starred).length }}</span></div>
-    <div class="stat-chip">類型 <span>{{ uniqueTypes.length }}</span> 種</div>
-  </div>
-
-  <!-- Toolbar -->
-  <div class="toolbar">
-    <div class="search-box">
-      <span class="icon">🔍</span>
-      <input v-model="search" type="text" placeholder="搜尋名稱或編號…" />
-    </div>
-    <select v-model="filterType">
-      <option value="">全部類型</option>
-      <option v-for="t in uniqueTypes" :key="t" :value="t">{{ typeLabel(t) }}</option>
-    </select>
-    <select v-model="filterStarred">
-      <option value="">全部</option>
-      <option value="yes">⭐ 已收藏</option>
-      <option value="no">未收藏</option>
-    </select>
-    <select v-model="sortBy">
-      <option value="number">依編號排序</option>
-      <option value="name">依名稱排序</option>
-      <option value="newest">最新新增</option>
-    </select>
-    <button class="btn btn-primary" @click="openAdd">＋ 新增寶可夢</button>
-  </div>
-
-  <!-- Grid -->
-  <div class="grid">
-    <div v-if="paginated.length === 0" class="empty">
-      <div class="big">😶</div>
-      <p>找不到符合的寶可夢，試試其他條件？</p>
-    </div>
-
-    <div v-for="p in paginated" :key="p.id" class="card">
-      <div class="card-img">
-        <span class="card-number">#{{ String(p.number).padStart(4,'0') }}</span>
-        <span class="card-star" @click="toggleStar(p)" :title="p.starred ? '取消收藏' : '加入收藏'">
-          {{ p.starred ? '⭐' : '☆' }}
-        </span>
-        <img v-if="p.image" :src="p.image" :alt="p.name" @error="e=>e.target.style.display='none'" />
-        <div v-else class="no-img">❓</div>
+  <!-- ── COLLECTION VIEW ── -->
+  <div v-if="view==='col'">
+    <div class="tb">
+      <div class="tb-search">
+        <span class="tb-search-ic">🔍</span>
+        <input class="tb-inp" v-model="search" type="text" placeholder="搜尋名稱、角色、系列…"/>
       </div>
-      <div class="card-body">
-        <div class="card-name">{{ p.name }}</div>
-        <div class="card-type">
-          <span
-            v-for="t in p.types" :key="t"
-            class="type-badge"
-            :class="'type-' + (typeClass(t))"
-          >{{ typeLabel(t) }}</span>
+      <select class="tb-sel" v-model="filterCat">
+        <option value="">全部分類</option>
+        <option v-for="c in CATS" :key="c" :value="c">{{ c }}</option>
+      </select>
+      <select class="tb-sel" v-model="sortBy">
+        <option value="newest">最新</option>
+        <option value="oldest">最舊</option>
+        <option value="name">名稱</option>
+        <option value="qty">數量↓</option>
+      </select>
+      <span class="tb-count">{{ filtered.length }} 件</span>
+    </div>
+
+    <div v-if="loading" class="loading">LOADING...</div>
+
+    <div v-else-if="allItems.length === 0" class="empty">
+      <div class="empty-ic">📦</div>
+      <p>尚無收藏品<br>點下方 ＋ 開始記錄！</p>
+    </div>
+
+    <div v-else-if="filtered.length === 0" class="empty">
+      <div class="empty-ic">🔍</div>
+      <p>找不到符合的項目</p>
+    </div>
+
+    <div v-else class="grid">
+      <div v-for="item in filtered" :key="item.id" class="card">
+        <div class="card-img" @click="openDetail(item)">
+          <img v-if="item.photos && item.photos[0]" :src="item.photos[0]" :alt="item.name"/>
+          <div v-else class="no-photo">📷</div>
+          <span v-if="item.quantity > 1" class="card-qty">×{{ item.quantity }}</span>
+          <span class="card-cat" :class="catClass(item.category)">{{ item.category }}</span>
         </div>
-        <div v-if="p.note" class="card-note">{{ p.note }}</div>
-      </div>
-      <div class="card-actions">
-        <button class="btn btn-secondary" @click="openDetail(p)">詳情</button>
-        <button class="btn btn-primary" @click="openEdit(p)">編輯</button>
-        <button class="btn btn-danger" @click="confirmDelete(p)">刪除</button>
+        <div class="card-body" @click="openDetail(item)">
+          <div class="card-name">{{ item.name }}</div>
+          <div class="card-date">{{ item.date || '－' }}</div>
+          <div v-if="item.pokemons && item.pokemons.length" class="card-pokes">
+            <span v-for="p in item.pokemons.slice(0,3)" :key="p" class="poke-tag">{{ p }}</span>
+            <span v-if="item.pokemons.length > 3" class="poke-tag">+{{ item.pokemons.length-3 }}</span>
+          </div>
+        </div>
+        <div class="card-acts">
+          <button class="ca-btn" @click="openDetail(item)">詳情</button>
+          <button class="ca-btn ca-edit" @click="openEdit(item)">編輯</button>
+          <button class="ca-btn ca-del" @click="confirmDel(item)">刪除</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Pagination -->
-  <div class="pagination" v-if="totalPages > 1">
-    <button class="page-btn" :disabled="page===1" @click="page--">‹</button>
-    <button
-      v-for="n in pageNumbers" :key="n"
-      class="page-btn" :class="{active: n===page}"
-      @click="page=n"
-    >{{ n }}</button>
-    <button class="page-btn" :disabled="page===totalPages" @click="page++">›</button>
+  <!-- ── STATS VIEW ── -->
+  <div v-if="view==='stat'" class="sv">
+    <div v-if="!stats" class="empty">
+      <div class="empty-ic">📊</div>
+      <p>新增收藏品後<br>統計將顯示於此</p>
+    </div>
+    <template v-else>
+
+      <!-- overview -->
+      <div class="sv-overview">
+        <div class="stat-block">
+          <div class="sb-num">{{ stats.totalItems }}</div>
+          <div class="sb-lbl">商品<br>種類</div>
+        </div>
+        <div class="stat-block">
+          <div class="sb-num">{{ stats.totalQty }}</div>
+          <div class="sb-lbl">總數<br>量</div>
+        </div>
+        <div class="stat-block">
+          <div class="sb-num">{{ stats.uSeries }}</div>
+          <div class="sb-lbl">系列<br>數</div>
+        </div>
+        <div class="stat-block">
+          <div class="sb-num">{{ stats.uPoke }}</div>
+          <div class="sb-lbl">角色<br>數</div>
+        </div>
+      </div>
+
+      <!-- category -->
+      <div class="sv-sec">
+        <div class="sv-sec-ttl">▶ 分類統計</div>
+        <div class="sv-sec-body">
+          <div v-for="[cat,cnt] in catEntries" :key="cat" class="bar-row">
+            <div class="bar-lbl">{{ cat }}</div>
+            <div class="bar-track">
+              <div class="bar-fill" :class="catBarCls(cat)" :style="{width:(cnt/stats.totalQty*100)+'%'}"></div>
+            </div>
+            <div class="bar-cnt">{{ cnt }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- pokemon ranking -->
+      <div class="sv-sec" v-if="stats.topPoke.length">
+        <div class="sv-sec-ttl">▶ 角色排行榜</div>
+        <div class="sv-sec-body">
+          <div v-for="([name,cnt],i) in stats.topPoke" :key="name" class="bar-row">
+            <div class="bar-lbl">{{ i+1 }}. {{ name }}</div>
+            <div class="bar-track">
+              <div class="bar-fill bf-yel" :style="{width:(cnt/stats.topPoke[0][1]*100)+'%'}"></div>
+            </div>
+            <div class="bar-cnt">{{ cnt }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- series -->
+      <div class="sv-sec" v-if="stats.topSeries.length">
+        <div class="sv-sec-ttl">▶ 系列收藏</div>
+        <div class="sv-sec-body">
+          <div v-for="([name,cnt]) in stats.topSeries" :key="name" class="bar-row">
+            <div class="bar-lbl">{{ name }}</div>
+            <div class="bar-track">
+              <div class="bar-fill bf-pur" :style="{width:(cnt/stats.topSeries[0][1]*100)+'%'}"></div>
+            </div>
+            <div class="bar-cnt">{{ cnt }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- location -->
+      <div class="sv-sec">
+        <div class="sv-sec-ttl">▶ 購入地點</div>
+        <div class="sv-sec-body">
+          <div v-for="([loc,cnt]) in locEntries" :key="loc" class="bar-row">
+            <div class="bar-lbl">{{ loc }}</div>
+            <div class="bar-track">
+              <div class="bar-fill bf-blue" :style="{width:(cnt/stats.totalQty*100)+'%'}"></div>
+            </div>
+            <div class="bar-cnt">{{ cnt }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- monthly -->
+      <div class="sv-sec" v-if="stats.monthly.length">
+        <div class="sv-sec-ttl">▶ 月別時間軸</div>
+        <div class="sv-sec-body">
+          <div v-for="([month,cnt]) in stats.monthly" :key="month" class="bar-row">
+            <div class="bar-lbl">{{ month }}</div>
+            <div class="bar-track">
+              <div class="bar-fill bf-grn" :style="{width:(cnt/maxMonthly*100)+'%'}"></div>
+            </div>
+            <div class="bar-cnt">{{ cnt }}</div>
+          </div>
+        </div>
+      </div>
+
+    </template>
   </div>
 
-  <!-- ── Add / Edit Modal ── -->
-  <div class="overlay" v-if="showForm" @click.self="closeForm">
+  <!-- ── FAB ── -->
+  <button v-if="view==='col'" class="fab" @click="openAdd">＋</button>
+
+  <!-- ── ADD/EDIT MODAL ── -->
+  <div class="overlay" v-if="showForm" @click.self="showForm=false">
     <div class="modal">
-      <div class="modal-header">
-        <h2>{{ editTarget ? '編輯寶可夢' : '新增寶可夢' }}</h2>
-        <button class="modal-close" @click="closeForm">✕</button>
+      <div class="mhd">
+        <h2>{{ editTarget ? '編輯商品' : '新增商品' }}</h2>
+        <button class="mhd-close" @click="showForm=false">✕</button>
       </div>
-      <div class="modal-body">
-        <div class="row">
-          <div>
-            <label>編號 *</label>
-            <input type="number" v-model.number="form.number" min="1" max="9999" placeholder="例：25" />
-          </div>
-          <div>
-            <label>名稱 *</label>
-            <input type="text" v-model="form.name" placeholder="例：皮卡丘" />
-          </div>
-        </div>
-        <div>
-          <label>圖片 URL</label>
-          <input type="url" v-model="form.image" placeholder="https://…" />
-          <div class="preview-img" v-if="form.image">
-            <img :src="form.image" alt="preview" @error="e=>e.target.style.display='none'" />
-          </div>
-        </div>
-        <div>
-          <label>屬性（可多選）</label>
-          <div class="type-selector">
-            <span
-              v-for="t in allTypes" :key="t"
-              class="type-toggle type-badge"
-              :class="['type-'+(typeClass(t)), form.types.includes(t) ? 'selected' : '']"
-              @click="toggleType(t)"
-            >{{ typeLabel(t) }}</span>
+      <div class="mbody">
+
+        <!-- photos -->
+        <div class="fg">
+          <div class="flabel">照片</div>
+          <div class="photos-area">
+            <div v-for="(ph,i) in form.photos" :key="i" class="ph-thumb">
+              <img :src="ph" alt="photo"/>
+              <button class="ph-rm" @click="removePhoto(i)">✕</button>
+            </div>
+            <label class="ph-add">
+              <span style="font-size:1.6rem">＋</span>
+              <span>照片</span>
+              <input type="file" accept="image/*" multiple style="display:none" @change="handlePhotoInput"/>
+            </label>
           </div>
         </div>
-        <div>
-          <label>備註</label>
-          <textarea v-model="form.note" placeholder="特徵、技能、回憶…"></textarea>
+
+        <!-- name -->
+        <div class="fg">
+          <div class="flabel">商品名稱 *</div>
+          <input class="finput" type="text" v-model="form.name" placeholder="例：皮卡丘 大型玩偶"/>
         </div>
+
+        <!-- category -->
+        <div class="fg">
+          <div class="flabel">分類 *</div>
+          <div class="cat-pills">
+            <button v-for="c in CATS" :key="c" class="cat-pill" :class="{on:form.category===c}" @click="form.category=c">{{ c }}</button>
+          </div>
+        </div>
+
+        <!-- pokemon tags -->
+        <div class="fg">
+          <div class="flabel">寶可夢角色（Enter 新增）</div>
+          <div class="tag-wrap" @click="$refs.tagInp.focus()">
+            <span v-for="p in form.pokemons" :key="p" class="poke-chip">
+              {{ p }}<button @click.stop="rmPoke(p)">×</button>
+            </span>
+            <input ref="tagInp" class="tag-inp" type="text" v-model="pokeVal"
+              @keydown.enter.prevent="addPoke"
+              @keydown.188.prevent="addPoke"
+              @keydown.backspace="bsPoke"
+              placeholder="例：皮卡丘"/>
+          </div>
+        </div>
+
+        <!-- series -->
+        <div class="fg">
+          <div class="flabel">系列／活動</div>
+          <input class="finput" type="text" v-model="form.series" placeholder="例：ポケモンフィット"/>
+        </div>
+
+        <!-- location -->
+        <div class="fg">
+          <div class="flabel">購入地點</div>
+          <div class="loc-toggle">
+            <button class="loc-opt" :class="{on:locMode==='online'}" @click="locMode='online'">ポケセン<br>online</button>
+            <button class="loc-opt" :class="{on:locMode==='custom'}" @click="locMode='custom'">其他地點</button>
+          </div>
+          <input v-if="locMode==='custom'" class="finput" type="text" v-model="customLoc"
+            placeholder="例：ポケモンセンタートウキョーDX" style="margin-top:6px"/>
+        </div>
+
+        <!-- date + qty -->
+        <div class="frow">
+          <div class="fg">
+            <div class="flabel">購入日期</div>
+            <input class="finput" type="date" v-model="form.date"/>
+          </div>
+          <div class="fg">
+            <div class="flabel">數量</div>
+            <input class="finput" type="number" v-model.number="form.quantity" min="1"/>
+          </div>
+        </div>
+
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" @click="closeForm">取消</button>
-        <button class="btn btn-success" @click="saveForm">{{ editTarget ? '儲存變更' : '新增' }}</button>
+      <div class="mfoot">
+        <button class="btn btn-drk" @click="showForm=false">取消</button>
+        <button class="btn btn-yel" @click="saveForm">{{ editTarget ? '儲存' : '新增' }}</button>
       </div>
     </div>
   </div>
 
-  <!-- ── Detail Modal ── -->
-  <div class="overlay" v-if="detailTarget" @click.self="detailTarget=null">
+  <!-- ── DETAIL MODAL ── -->
+  <div class="overlay" v-if="detailItem" @click.self="detailItem=null">
     <div class="modal">
-      <div class="modal-header">
-        <h2>{{ detailTarget.name }} #{{ String(detailTarget.number).padStart(4,'0') }}</h2>
-        <button class="modal-close" @click="detailTarget=null">✕</button>
+      <div class="mhd">
+        <h2>{{ detailItem.name }}</h2>
+        <button class="mhd-close" @click="detailItem=null">✕</button>
       </div>
-      <div class="detail-img">
-        <img v-if="detailTarget.image" :src="detailTarget.image" :alt="detailTarget.name" />
-        <div v-else style="font-size:5rem">❓</div>
+      <div class="dt-photos">
+        <img v-if="detailItem.photos && detailItem.photos.length" class="dt-img"
+          :src="detailItem.photos[dtPhotoIdx]" :alt="detailItem.name"/>
+        <div v-else class="dt-nophoto">📷</div>
+        <button v-if="detailItem.photos && detailItem.photos.length > 1"
+          class="dt-nav prv" @click="dtPhotoIdx=(dtPhotoIdx-1+detailItem.photos.length)%detailItem.photos.length">‹</button>
+        <button v-if="detailItem.photos && detailItem.photos.length > 1"
+          class="dt-nav nxt" @click="dtPhotoIdx=(dtPhotoIdx+1)%detailItem.photos.length">›</button>
       </div>
-      <div class="detail-body">
-        <div class="detail-row">
-          <span class="detail-label">編號</span>
-          <span class="detail-value">#{{ String(detailTarget.number).padStart(4,'0') }}</span>
+      <div class="dt-thumbs" v-if="detailItem.photos && detailItem.photos.length > 1">
+        <img v-for="(ph,i) in detailItem.photos" :key="i"
+          class="dt-thumb" :class="{on:i===dtPhotoIdx}"
+          :src="ph" @click="dtPhotoIdx=i"/>
+      </div>
+      <div class="dt-info">
+        <div class="dt-row">
+          <div class="dt-lbl">分類</div>
+          <div class="dt-val">{{ detailItem.category }}</div>
         </div>
-        <div class="detail-row">
-          <span class="detail-label">名稱</span>
-          <span class="detail-value">{{ detailTarget.name }}</span>
+        <div class="dt-row" v-if="detailItem.pokemons && detailItem.pokemons.length">
+          <div class="dt-lbl">角色</div>
+          <div class="dt-val">{{ detailItem.pokemons.join('、') }}</div>
         </div>
-        <div class="detail-row">
-          <span class="detail-label">屬性</span>
-          <div class="card-type" style="margin:0">
-            <span v-for="t in detailTarget.types" :key="t" class="type-badge" :class="'type-'+(typeClass(t))">{{ typeLabel(t) }}</span>
-          </div>
+        <div class="dt-row" v-if="detailItem.series">
+          <div class="dt-lbl">系列</div>
+          <div class="dt-val">{{ detailItem.series }}</div>
         </div>
-        <div class="detail-row">
-          <span class="detail-label">收藏</span>
-          <span class="detail-value">{{ detailTarget.starred ? '⭐ 已收藏' : '未收藏' }}</span>
+        <div class="dt-row">
+          <div class="dt-lbl">地點</div>
+          <div class="dt-val">{{ detailItem.location || 'ポケセンonline' }}</div>
         </div>
-        <div class="detail-row" v-if="detailTarget.note">
-          <span class="detail-label">備註</span>
-          <span class="detail-value" style="text-align:right;max-width:60%">{{ detailTarget.note }}</span>
+        <div class="dt-row">
+          <div class="dt-lbl">日期</div>
+          <div class="dt-val">{{ detailItem.date || '－' }}</div>
+        </div>
+        <div class="dt-row">
+          <div class="dt-lbl">數量</div>
+          <div class="dt-val">{{ detailItem.quantity || 1 }}</div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" @click="detailTarget=null">關閉</button>
-        <button class="btn btn-primary" @click="openEdit(detailTarget); detailTarget=null">編輯</button>
+      <div class="mfoot">
+        <button class="btn btn-drk" @click="detailItem=null">關閉</button>
+        <button class="btn btn-yel" @click="openEdit(detailItem);detailItem=null">編輯</button>
       </div>
     </div>
   </div>
 
-  <!-- ── Delete Confirm Modal ── -->
-  <div class="overlay" v-if="deleteTarget" @click.self="deleteTarget=null">
+  <!-- ── DELETE CONFIRM ── -->
+  <div class="overlay" v-if="delTarget" @click.self="delTarget=null">
     <div class="modal">
-      <div class="modal-header">
+      <div class="mhd del-mhd">
         <h2>確認刪除</h2>
-        <button class="modal-close" @click="deleteTarget=null">✕</button>
+        <button class="mhd-close" @click="delTarget=null">✕</button>
       </div>
-      <div class="modal-body">
-        <p>確定要從收藏中移除 <strong>{{ deleteTarget.name }}</strong> 嗎？此操作無法復原。</p>
+      <div class="mbody">
+        <p class="del-txt">確定要移除 <strong>{{ delTarget.name }}</strong> 嗎？<br>此操作無法復原。</p>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" @click="deleteTarget=null">取消</button>
-        <button class="btn btn-danger" @click="doDelete">確認刪除</button>
+      <div class="mfoot">
+        <button class="btn btn-drk" @click="delTarget=null">取消</button>
+        <button class="btn btn-red" @click="doDelete">確認刪除</button>
       </div>
     </div>
   </div>
 
-  <!-- Toast -->
-  <div class="toast-container">
-    <div v-for="t in toasts" :key="t.id" class="toast" :class="{error: t.error}">{{ t.msg }}</div>
+  <!-- ── I/O MODAL ── -->
+  <div class="overlay" v-if="showIO" @click.self="showIO=false">
+    <div class="modal">
+      <div class="mhd">
+        <h2>資料備份</h2>
+        <button class="mhd-close" @click="showIO=false">✕</button>
+      </div>
+      <div class="mbody">
+        <div class="io-sec">
+          <div class="io-ttl">📤 匯出備份</div>
+          <p class="io-desc">將收藏品資料存成 JSON 檔，可用於換機時恢復。</p>
+          <div class="io-btns">
+            <button class="btn btn-yel" @click="exportData(true)">匯出（含照片）</button>
+            <button class="btn btn-drk" @click="exportData(false)">匯出（不含照片）</button>
+          </div>
+        </div>
+        <div class="io-sec">
+          <div class="io-ttl">📥 匯入備份</div>
+          <p class="io-desc">選擇之前匯出的 JSON 檔來恢復資料。<br>⚠️ 會合併到現有資料（不會覆蓋）。</p>
+          <div class="io-btns">
+            <label class="btn btn-drk" style="cursor:pointer">
+              選擇 JSON 檔
+              <input type="file" accept=".json" style="display:none" @change="importData"/>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="mfoot">
+        <button class="btn btn-drk" @click="showIO=false">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOASTS ── -->
+  <div class="toasts">
+    <div v-for="t in toasts" :key="t.id" class="toast" :class="t.cls">{{ t.msg }}</div>
   </div>
 
 </div>
-
 <script>
-const { createApp, ref, computed, watch } = Vue;
+// ── IndexedDB ──
+const DB = (() => {
+  const NAME = 'pokemon-merch-db', VER = 1, ST = 'items';
+  let _db = null;
 
-const TYPE_MAP = {
-  fire:'火',water:'水',grass:'草',electric:'電',psychic:'超能力',
-  normal:'一般',fighting:'格鬥',flying:'飛行',poison:'毒',ground:'地面',
-  rock:'岩石',bug:'蟲',ghost:'幽靈',steel:'鋼',ice:'冰',
-  dragon:'龍',dark:'惡',fairy:'妖精'
-};
-const ALL_TYPES = Object.keys(TYPE_MAP);
+  function open() {
+    if (_db) return Promise.resolve(_db);
+    return new Promise((res, rej) => {
+      const req = indexedDB.open(NAME, VER);
+      req.onupgradeneeded = ({ target: { result: db } }) => {
+        if (!db.objectStoreNames.contains(ST))
+          db.createObjectStore(ST, { keyPath: 'id', autoIncrement: true });
+      };
+      req.onsuccess = ({ target: { result: db } }) => { _db = db; res(db); };
+      req.onerror   = e => rej(e.target.error);
+    });
+  }
 
-const DEFAULTS = [
-  { id:1, number:1,  name:'妙蛙種子', image:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png',  types:['grass','poison'], note:'背上長著種子，能從陽光和雨水汲取能量。', starred:false },
-  { id:2, number:4,  name:'小火龍',   image:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/4.png',  types:['fire'],          note:'尾巴上的火焰代表牠的健康，若熄滅就危險了。', starred:true },
-  { id:3, number:7,  name:'傑尼龜',   image:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/7.png',  types:['water'],         note:'圓形的龜甲既堅固又可作為浮具。', starred:false },
-  { id:4, number:25, name:'皮卡丘',   image:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png', types:['electric'],      note:'臉頰紅點會釋放電力，是超受歡迎的吉祥物！', starred:true },
-  { id:5, number:39, name:'胖丁',     image:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/39.png', types:['normal','fairy'], note:'用催眠曲讓對手入睡後再在臉上畫畫。', starred:false },
-  { id:6, number:52, name:'喵喵',     image:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/52.png', types:['normal'],        note:'喜歡閃亮的東西，會偷偷把硬幣藏起來。', starred:false },
-  { id:7, number:94, name:'耿鬼',     image:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/94.png', types:['ghost','poison'], note:'據說被牠的眼睛直視後會不明原因喪命。', starred:true },
-  { id:8, number:143,name:'卡比獸',   image:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/143.png',types:['normal'],        note:'一天要吃超過400公斤的食物，其餘時間都在睡覺。', starred:false },
-  { id:9, number:149,name:'快龍',     image:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/149.png',types:['dragon','flying'],note:'傳說牠能繞地球一圈只需16小時。', starred:true },
-  { id:10,number:196,name:'太陽伊布', image:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/196.png',types:['psychic'],       note:'伊布在陽光石的照耀下進化而成，散發神秘光芒。', starred:false },
-];
+  function wrap(req) {
+    return new Promise((res, rej) => {
+      req.onsuccess = e => res(e.target.result);
+      req.onerror   = e => rej(e.target.error);
+    });
+  }
+
+  return {
+    async getAll() { return wrap((await open()).transaction(ST,'readonly').objectStore(ST).getAll()); },
+    async add(it)  { return wrap((await open()).transaction(ST,'readwrite').objectStore(ST).add(it)); },
+    async put(it)  { return wrap((await open()).transaction(ST,'readwrite').objectStore(ST).put(it)); },
+    async del(id)  { return wrap((await open()).transaction(ST,'readwrite').objectStore(ST).delete(id)); },
+    async bulkAdd(items) {
+      const db = await open();
+      return new Promise((res, rej) => {
+        const tx = db.transaction(ST, 'readwrite'), s = tx.objectStore(ST);
+        items.forEach(({ id, ...rest }) => s.add(rest));
+        tx.oncomplete = () => res();
+        tx.onerror    = e => rej(e.target.error);
+      });
+    }
+  };
+})();
+
+function readAsDataURL(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+// ── Vue App ──
+const { createApp, ref, computed, onMounted } = Vue;
+const CATS = ['娃娃', '文具', '徽章', '其他'];
+
+const CAT_CLASS = { '娃娃':'cc-doll', '文具':'cc-stat', '徽章':'cc-badg', '其他':'cc-othr' };
+const CAT_BAR   = { '娃娃':'bf-red',  '文具':'bf-blue', '徽章':'bf-yel',  '其他':'bf-grn' };
 
 createApp({
   setup() {
-    const stored = localStorage.getItem('pokemons');
-    const pokemons = ref(stored ? JSON.parse(stored) : DEFAULTS.map(p=>({...p})));
-    let nextId = ref(pokemons.value.reduce((m,p)=>Math.max(m,p.id),0) + 1);
+    const view      = ref('col');
+    const allItems  = ref([]);
+    const loading   = ref(true);
+    const search    = ref('');
+    const filterCat = ref('');
+    const sortBy    = ref('newest');
 
-    watch(pokemons, v => localStorage.setItem('pokemons', JSON.stringify(v)), { deep: true });
-
-    // ── filters & sort ──
-    const search       = ref('');
-    const filterType   = ref('');
-    const filterStarred= ref('');
-    const sortBy       = ref('number');
-    const page         = ref(1);
-    const PER_PAGE     = 12;
-
-    const filtered = computed(() => {
-      let list = pokemons.value;
-      const q = search.value.trim().toLowerCase();
-      if (q) list = list.filter(p =>
-        p.name.toLowerCase().includes(q) || String(p.number).includes(q)
-      );
-      if (filterType.value)   list = list.filter(p => p.types.includes(filterType.value));
-      if (filterStarred.value === 'yes') list = list.filter(p => p.starred);
-      if (filterStarred.value === 'no')  list = list.filter(p => !p.starred);
-      return [...list].sort((a,b) => {
-        if (sortBy.value === 'number') return a.number - b.number;
-        if (sortBy.value === 'name')   return a.name.localeCompare(b.name, 'zh');
-        return b.id - a.id;
-      });
-    });
-
-    watch(filtered, () => { page.value = 1; });
-
-    const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / PER_PAGE)));
-    const paginated  = computed(() => {
-      const s = (page.value - 1) * PER_PAGE;
-      return filtered.value.slice(s, s + PER_PAGE);
-    });
-    const pageNumbers = computed(() => {
-      const total = totalPages.value, cur = page.value;
-      const pages = new Set([1, total, cur, cur-1, cur+1].filter(n => n>=1 && n<=total));
-      return [...pages].sort((a,b)=>a-b);
-    });
-
-    const uniqueTypes = computed(() => {
-      const s = new Set();
-      pokemons.value.forEach(p => p.types.forEach(t => s.add(t)));
-      return ALL_TYPES.filter(t => s.has(t));
-    });
-
-    // ── type helpers ──
-    const typeClass  = t => ALL_TYPES.includes(t) ? t : 'default';
-    const typeLabel  = t => TYPE_MAP[t] || t;
-
-    // ── form ──
     const showForm   = ref(false);
     const editTarget = ref(null);
     const form       = ref({});
+    const locMode    = ref('online');
+    const customLoc  = ref('');
+    const pokeVal    = ref('');
+    const tagInp     = ref(null);
 
-    const blankForm  = () => ({ number:'', name:'', image:'', types:[], note:'' });
+    const detailItem = ref(null);
+    const dtPhotoIdx = ref(0);
+    const delTarget  = ref(null);
+    const showIO     = ref(false);
+    const toasts     = ref([]);
 
-    const openAdd = () => {
+    async function load() {
+      loading.value = true;
+      allItems.value = await DB.getAll();
+      loading.value = false;
+    }
+    onMounted(load);
+
+    // ── filtered ──
+    const filtered = computed(() => {
+      const q = search.value.trim().toLowerCase();
+      let list = allItems.value;
+      if (q) list = list.filter(i =>
+        i.name.toLowerCase().includes(q) ||
+        (i.pokemons||[]).some(p => p.toLowerCase().includes(q)) ||
+        (i.series||'').toLowerCase().includes(q)
+      );
+      if (filterCat.value) list = list.filter(i => i.category === filterCat.value);
+      return [...list].sort((a,b) => {
+        if (sortBy.value === 'newest') return (b.createdAt||b.id||0) - (a.createdAt||a.id||0);
+        if (sortBy.value === 'oldest') return (a.createdAt||a.id||0) - (b.createdAt||b.id||0);
+        if (sortBy.value === 'name')   return a.name.localeCompare(b.name, 'zh');
+        if (sortBy.value === 'qty')    return (b.quantity||1) - (a.quantity||1);
+        return 0;
+      });
+    });
+
+    // ── stats ──
+    const stats = computed(() => {
+      const items = allItems.value;
+      if (!items.length) return null;
+      const totalItems = items.length;
+      const totalQty   = items.reduce((s,i) => s+(i.quantity||1), 0);
+
+      const byCat={}, byPoke={}, bySeries={}, byLoc={}, byMonth={};
+      items.forEach(i => {
+        const c = i.category||'其他';
+        byCat[c] = (byCat[c]||0) + (i.quantity||1);
+        (i.pokemons||[]).forEach(p => { byPoke[p] = (byPoke[p]||0)+(i.quantity||1); });
+        if (i.series) bySeries[i.series] = (bySeries[i.series]||0)+(i.quantity||1);
+        const l = i.location||'ポケセンonline';
+        byLoc[l] = (byLoc[l]||0)+(i.quantity||1);
+        if (i.date) { const m=i.date.slice(0,7); byMonth[m]=(byMonth[m]||0)+(i.quantity||1); }
+      });
+      return {
+        totalItems, totalQty,
+        byCat,
+        topPoke:   Object.entries(byPoke).sort((a,b)=>b[1]-a[1]).slice(0,8),
+        topSeries: Object.entries(bySeries).sort((a,b)=>b[1]-a[1]),
+        byLoc,
+        monthly:   Object.entries(byMonth).sort((a,b)=>a[0].localeCompare(b[0])),
+        uPoke:     Object.keys(byPoke).length,
+        uSeries:   Object.keys(bySeries).length,
+      };
+    });
+
+    const catEntries = computed(() => stats.value ? Object.entries(stats.value.byCat).sort((a,b)=>b[1]-a[1]) : []);
+    const locEntries = computed(() => stats.value ? Object.entries(stats.value.byLoc).sort((a,b)=>b[1]-a[1]) : []);
+    const maxMonthly = computed(() => {
+      if (!stats.value?.monthly.length) return 1;
+      return Math.max(...stats.value.monthly.map(([,c])=>c));
+    });
+
+    const catClass  = c => CAT_CLASS[c] || 'cc-othr';
+    const catBarCls = c => CAT_BAR[c]   || 'bf-grn';
+
+    // ── form ──
+    function blank() { return { photos:[], name:'', category:'娃娃', pokemons:[], series:'', date:'', quantity:1 }; }
+
+    function openAdd() {
       editTarget.value = null;
-      form.value = blankForm();
+      form.value = blank();
+      locMode.value = 'online'; customLoc.value = ''; pokeVal.value = '';
       showForm.value = true;
-    };
-    const openEdit = p => {
-      editTarget.value = p;
-      form.value = { number: p.number, name: p.name, image: p.image, types: [...p.types], note: p.note };
+    }
+
+    function openEdit(item) {
+      editTarget.value = item;
+      form.value = { photos:[...(item.photos||[])], name:item.name, category:item.category||'娃娃',
+        pokemons:[...(item.pokemons||[])], series:item.series||'', date:item.date||'', quantity:item.quantity||1 };
+      if (item.location && item.location !== 'ポケセンonline') {
+        locMode.value = 'custom'; customLoc.value = item.location;
+      } else { locMode.value = 'online'; customLoc.value = ''; }
+      pokeVal.value = '';
       showForm.value = true;
-    };
-    const closeForm = () => { showForm.value = false; };
+    }
 
-    const toggleType = t => {
-      const i = form.value.types.indexOf(t);
-      i === -1 ? form.value.types.push(t) : form.value.types.splice(i, 1);
-    };
-
-    const saveForm = () => {
-      if (!form.value.name.trim())    { toast('請輸入名稱', true); return; }
-      if (!form.value.number || form.value.number < 1) { toast('請輸入有效的編號', true); return; }
+    async function saveForm() {
+      if (!form.value.name.trim()) { toast('請輸入商品名稱','err'); return; }
+      const location = locMode.value === 'online' ? 'ポケセンonline' : (customLoc.value.trim()||'ポケセンonline');
+      const payload  = { ...form.value, name:form.value.name.trim(), location, quantity:form.value.quantity||1 };
       if (editTarget.value) {
-        Object.assign(editTarget.value, { ...form.value, name: form.value.name.trim() });
-        toast('已儲存變更 ✔');
+        payload.id = editTarget.value.id;
+        payload.createdAt = editTarget.value.createdAt;
+        await DB.put(payload);
+        const idx = allItems.value.findIndex(i => i.id === payload.id);
+        if (idx !== -1) allItems.value[idx] = payload;
+        toast('已儲存變更');
       } else {
-        pokemons.value.push({ id: nextId.value++, starred: false, ...form.value, name: form.value.name.trim() });
-        toast('已新增寶可夢 ✔');
+        payload.createdAt = Date.now();
+        payload.id = await DB.add(payload);
+        allItems.value.push(payload);
+        toast('已新增商品');
       }
-      closeForm();
-    };
+      showForm.value = false;
+    }
 
-    // ── detail ──
-    const detailTarget = ref(null);
-    const openDetail   = p => { detailTarget.value = p; };
+    async function handlePhotoInput(e) {
+      for (const f of Array.from(e.target.files)) {
+        if (!f.type.startsWith('image/')) continue;
+        form.value.photos.push(await readAsDataURL(f));
+      }
+      e.target.value = '';
+    }
+    const removePhoto = i => form.value.photos.splice(i, 1);
 
-    // ── delete ──
-    const deleteTarget = ref(null);
-    const confirmDelete = p => { deleteTarget.value = p; };
-    const doDelete = () => {
-      pokemons.value = pokemons.value.filter(p => p.id !== deleteTarget.value.id);
-      toast(`已移除 ${deleteTarget.value.name}`);
-      deleteTarget.value = null;
-    };
+    // poke tags
+    function addPoke() {
+      const v = pokeVal.value.trim();
+      if (v && !form.value.pokemons.includes(v)) form.value.pokemons.push(v);
+      pokeVal.value = '';
+    }
+    const rmPoke  = p => { form.value.pokemons = form.value.pokemons.filter(x => x !== p); };
+    const bsPoke  = () => { if (!pokeVal.value && form.value.pokemons.length) form.value.pokemons.pop(); };
 
-    // ── star ──
-    const toggleStar = p => { p.starred = !p.starred; };
+    // detail
+    function openDetail(item) { detailItem.value = item; dtPhotoIdx.value = 0; }
 
-    // ── toasts ──
-    const toasts = ref([]);
-    const toast = (msg, error=false) => {
-      const id = Date.now();
-      toasts.value.push({ id, msg, error });
-      setTimeout(() => { toasts.value = toasts.value.filter(t=>t.id!==id); }, 2500);
-    };
+    // delete
+    const confirmDel = item => { delTarget.value = item; };
+    async function doDelete() {
+      const item = delTarget.value;
+      await DB.del(item.id);
+      allItems.value = allItems.value.filter(i => i.id !== item.id);
+      toast(`已移除 ${item.name}`);
+      delTarget.value = null;
+    }
+
+    // export / import
+    async function exportData(withPhotos) {
+      const items = await DB.getAll();
+      const data  = withPhotos ? items : items.map(({ photos, ...r }) => ({ ...r, photos:[] }));
+      const blob  = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `pokemon-collection-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast('匯出完成','info');
+    }
+
+    async function importData(e) {
+      const file = e.target.files[0]; e.target.value = '';
+      if (!file) return;
+      try {
+        const items = JSON.parse(await file.text());
+        if (!Array.isArray(items)) throw new Error('格式錯誤');
+        await DB.bulkAdd(items);
+        await load();
+        toast(`已匯入 ${items.length} 筆`,'info');
+        showIO.value = false;
+      } catch(err) { toast('匯入失敗：'+err.message,'err'); }
+    }
+
+    // toast
+    function toast(msg, type='') {
+      const id = Date.now()+Math.random();
+      const cls = type==='err' ? 'toast-err' : type==='info' ? 'toast-info' : 'toast-ok';
+      toasts.value.push({ id, msg, cls });
+      setTimeout(() => { toasts.value = toasts.value.filter(t => t.id !== id); }, 2800);
+    }
 
     return {
-      pokemons, filtered, paginated, page, totalPages, pageNumbers,
-      search, filterType, filterStarred, sortBy,
-      uniqueTypes, allTypes: ALL_TYPES,
-      typeClass, typeLabel,
-      showForm, editTarget, form,
-      openAdd, openEdit, closeForm, toggleType, saveForm,
-      detailTarget, openDetail,
-      deleteTarget, confirmDelete, doDelete,
-      toggleStar, toasts,
+      view, allItems, loading, search, filterCat, sortBy,
+      showForm, editTarget, form, locMode, customLoc, pokeVal, tagInp,
+      detailItem, dtPhotoIdx, delTarget, showIO, toasts,
+      filtered, stats, catEntries, locEntries, maxMonthly,
+      CATS, catClass, catBarCls,
+      openAdd, openEdit, saveForm, handlePhotoInput, removePhoto,
+      addPoke, rmPoke, bsPoke,
+      openDetail, confirmDel, doDelete,
+      exportData, importData,
     };
   }
 }).mount('#app');
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js');
-  });
-}
+if ('serviceWorker' in navigator)
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
 </script>
 </body>
 </html>

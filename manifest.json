@@ -1,7 +1,7 @@
 {
-  "name": "寶可夢收藏品管理",
+  "name": "寶可夢收藏庫存",
   "short_name": "寶可夢收藏",
-  "description": "管理你的寶可夢收藏品",
+  "description": "寶可夢週邊收藏庫存管理",
   "start_url": "/pokemon-collection/",
   "scope": "/pokemon-collection/",
   "display": "standalone",
