@@ -143,7 +143,7 @@
 
     /* location toggle */
     .loc-toggle{display:flex;gap:6px}
-    .loc-opt{flex:1;padding:9px 6px;text-align:center;font-family:var(--px);font-size:.55rem;
+    .loc-opt{flex:1;padding:8px 4px;text-align:center;font-family:var(--px);font-size:.48rem;
       cursor:pointer;border:2px solid var(--bhi);background:var(--card);color:var(--dim);line-height:2}
     .loc-opt.on{background:var(--yellow);color:#111;border-color:var(--yel-hi) var(--yel-sh) var(--yel-sh) var(--yel-hi)}
 
@@ -501,11 +501,20 @@
         <div class="fg">
           <div class="flabel">購入地點</div>
           <div class="loc-toggle">
-            <button class="loc-opt" :class="{on:locMode==='online'}" @click="locMode='online'">ポケセン<br>online</button>
-            <button class="loc-opt" :class="{on:locMode==='custom'}" @click="locMode='custom'">其他地點</button>
+            <button class="loc-opt" :class="{on:locMode==='online'}"   @click="locMode='online'">ポケセン<br>online</button>
+            <button class="loc-opt" :class="{on:locMode==='pokecen'}"  @click="locMode='pokecen'">ポケセン<br>実店舗</button>
+            <button class="loc-opt" :class="{on:locMode==='custom'}"   @click="locMode='custom'">その他</button>
           </div>
+          <select v-if="locMode==='pokecen'" class="fsel" v-model="pokecenStore" style="margin-top:6px">
+            <optgroup label="🇯🇵 日本">
+              <option v-for="s in POKECENS_JP" :key="s" :value="s">{{ s }}</option>
+            </optgroup>
+            <optgroup label="🇹🇼 台灣">
+              <option v-for="s in POKECENS_TW" :key="s" :value="s">{{ s }}</option>
+            </optgroup>
+          </select>
           <input v-if="locMode==='custom'" class="finput" type="text" v-model="customLoc"
-            placeholder="例：ポケモンセンタートウキョーDX" style="margin-top:6px"/>
+            placeholder="例：其他活動會場" style="margin-top:6px"/>
         </div>
 
         <!-- date + qty -->
@@ -697,6 +706,25 @@ const CATS = ['娃娃', '文具', '徽章', '其他'];
 const CAT_CLASS = { '娃娃':'cc-doll', '文具':'cc-stat', '徽章':'cc-badg', '其他':'cc-othr' };
 const CAT_BAR   = { '娃娃':'bf-red',  '文具':'bf-blue', '徽章':'bf-yel',  '其他':'bf-grn' };
 
+const POKECENS_JP = [
+  'ポケモンセンタートウキョーDX',
+  'ポケモンセンタースカイツリータウン',
+  'ポケモンセンターオーサカ',
+  'ポケモンセンターキョウト',
+  'ポケモンセンターナゴヤ',
+  'ポケモンセンターサッポロ',
+  'ポケモンセンターフクオカ',
+  'ポケモンセンターヒロシマ',
+  'ポケモンセンタートウホク',
+  'ポケモンセンターコウベ',
+  'ポケモンセンターカナザワ',
+  'ポケモンセンターニシノミヤ',
+];
+const POKECENS_TW = [
+  'ポケモンセンタータイペイ',
+];
+const ALL_POKECENS = [...POKECENS_JP, ...POKECENS_TW];
+
 createApp({
   setup() {
     const view      = ref('col');
@@ -709,8 +737,9 @@ createApp({
     const showForm   = ref(false);
     const editTarget = ref(null);
     const form       = ref({});
-    const locMode    = ref('online');
-    const customLoc  = ref('');
+    const locMode     = ref('online');
+    const customLoc   = ref('');
+    const pokecenStore = ref(POKECENS_JP[0]);
     const pokeVal    = ref('');
     const tagInp     = ref(null);
 
@@ -791,7 +820,8 @@ createApp({
     function openAdd() {
       editTarget.value = null;
       form.value = blank();
-      locMode.value = 'online'; customLoc.value = ''; pokeVal.value = '';
+      locMode.value = 'online'; customLoc.value = '';
+      pokecenStore.value = POKECENS_JP[0]; pokeVal.value = '';
       showForm.value = true;
     }
 
@@ -799,16 +829,23 @@ createApp({
       editTarget.value = item;
       form.value = { photos:[...(item.photos||[])], name:item.name, category:item.category||'娃娃',
         pokemons:[...(item.pokemons||[])], series:item.series||'', date:item.date||'', quantity:item.quantity||1 };
-      if (item.location && item.location !== 'ポケセンonline') {
-        locMode.value = 'custom'; customLoc.value = item.location;
-      } else { locMode.value = 'online'; customLoc.value = ''; }
+      const loc = item.location || 'ポケセンonline';
+      if (loc === 'ポケセンonline') {
+        locMode.value = 'online'; customLoc.value = ''; pokecenStore.value = POKECENS_JP[0];
+      } else if (ALL_POKECENS.includes(loc)) {
+        locMode.value = 'pokecen'; pokecenStore.value = loc; customLoc.value = '';
+      } else {
+        locMode.value = 'custom'; customLoc.value = loc; pokecenStore.value = POKECENS_JP[0];
+      }
       pokeVal.value = '';
       showForm.value = true;
     }
 
     async function saveForm() {
       if (!form.value.name.trim()) { toast('請輸入商品名稱','err'); return; }
-      const location = locMode.value === 'online' ? 'ポケセンonline' : (customLoc.value.trim()||'ポケセンonline');
+      const location = locMode.value === 'online'   ? 'ポケセンonline'
+                     : locMode.value === 'pokecen' ? (pokecenStore.value || POKECENS_JP[0])
+                     : (customLoc.value.trim() || 'ポケセンonline');
       // 明確建立純物件（避免 Vue reactive Proxy 無法被 IndexedDB structured clone）
       const payload = {
         photos:   [...(form.value.photos   || [])],
@@ -908,7 +945,8 @@ createApp({
 
     return {
       view, allItems, loading, search, filterCat, sortBy,
-      showForm, editTarget, form, locMode, customLoc, pokeVal, tagInp,
+      showForm, editTarget, form, locMode, customLoc, pokecenStore, pokeVal, tagInp,
+      POKECENS_JP, POKECENS_TW,
       detailItem, dtPhotoIdx, delTarget, showIO, toasts,
       filtered, stats, catEntries, locEntries, maxMonthly,
       CATS, catClass, catBarCls,
